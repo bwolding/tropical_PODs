@@ -1,9 +1,15 @@
 cff-version: 1.2.0
 message: "If you use this software, please cite it as below."
 authors:
-  - family-names: Gehne
+- family-names: Brandon
+    given-names: Wolding
+    orcid: https://orcid.org/0000-0001-7516-7081
+- family-names: Vijit
+    given-names: Maithel
+    orcid: TBD
+- family-names: Gehne
     given-names: Maria
     orcid: https://orcid.org/0000-0002-7267-8676
-title: "Tropical Diagnostics Toolbox for Numerical Weather Forecasts"
-version: 1.2
-date-released: 2021-01-19
+title: "Tropical Process-Oriented Diagnostics (POD) Toolbox"
+version: 1.0
+date-released: 2024-03-01
