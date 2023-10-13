@@ -1,3 +1,6 @@
+import numpy as np
+import xarray as xr
+
 ### Limit list of files to select years
 
 def limit_files_to_select_years(list_of_files, list_of_desired_years):
@@ -28,6 +31,7 @@ def calculate_saturation_specific_humidity(pressure, temperature):
     
     # Calculate Relative Humidity Based on Outdated WMO 1987 adapatation of Goff and Gratch Saturation Vapor Pressure (SVP)
     # Units of pressure are [Pa], temperature are [K]
+    # Testing against MetPy function gives agreement within ~1% for CSF calculations.
     
     T_0 = 273.16
     
@@ -39,18 +43,6 @@ def calculate_saturation_specific_humidity(pressure, temperature):
     eta = 0.62198 # Ratios of molecular weights of water and dry air
     
     saturation_specific_humidity = eta * SVP / pressure
-    
-    return saturation_specific_humidity
-
-### Calculate saturation specific humidity using metpy
-
-def calculate_saturation_specific_humidity_metpy(pressure, temperature):
-    
-    # I typically do not use this function. Testing against above function gives agreement within ~1% for CSF calculations.
-    
-    saturation_mixing_ratio = mpcalc.saturation_mixing_ratio(pressure * units.pascal, temperature * units.kelvin)
-    
-    saturation_specific_humidity = mpcalc.specific_humidity_from_mixing_ratio(saturation_mixing_ratio)
     
     return saturation_specific_humidity
 
