@@ -35,9 +35,9 @@ def calculate_saturation_specific_humidity(pressure, temperature):
     
     T_0 = 273.16
     
-    log10SVP = 10.79574 * (1 - T_0 / temperature) - 5.028 * xr.ufuncs.log10(temperature / T_0) + 1.50475 * (10 ** -4) * (1 - 10 ** (-8.2969 * (temperature / (T_0 - 1)))) \
+    log10SVP = 10.79574 * (1 - T_0 / temperature) - 5.028 * xr.apply_ufunc(np.log10,(temperature / T_0)) + 1.50475 * (10 ** -4) * (1 - 10 ** (-8.2969 * (temperature / (T_0 - 1)))) \
                + 0.42873 * (10 ** -3) * (10 ** (4.76955 * ((1 - T_0) / temperature))) + 0.78614 + 2.0
-    
+        
     SVP = 10 ** (log10SVP)
     
     eta = 0.62198 # Ratios of molecular weights of water and dry air
@@ -68,7 +68,7 @@ def mass_weighted_vertical_integral_w_nan(variable_to_integrate, pressure_model_
     
     # Set dp = nan at levels missing data so mass of those levels not included in calculation of dp_total
     
-    dp = dp.where(~xr.ufuncs.isnan(variable_to_integrate), drop=False, other=np.nan)
+    dp = dp.where(~xr.apply_ufunc(np.isnan,variable_to_integrate), drop=False, other=np.nan)
 
     # Mass weight each layer
     
@@ -82,7 +82,7 @@ def mass_weighted_vertical_integral_w_nan(variable_to_integrate, pressure_model_
     # Set ci_variable to nan wherever dp_total is zero or nan
     
     ci_variable = ci_variable.where(~(dp_total==0), drop = False, other=np.nan)
-    ci_variable = ci_variable.where(~xr.ufuncs.isnan(dp_total), drop = False, other=np.nan)
+    ci_variable = ci_variable.where(~xr.apply_ufunc(np.isnan,dp_total), drop = False, other=np.nan)
     
     # Calculate mass weighted vertical average over layer integrated over
     
