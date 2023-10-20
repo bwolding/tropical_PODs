@@ -142,7 +142,7 @@ def bin_by_one_variable(variable_to_be_binned, BV1, lower_BV1_bin_limit_vector, 
         bin_index = (BV1 >= lower_BV1_bin_limit_DA.where(lower_BV1_bin_limit_DA.BV1_bin_midpoint == BV1_bin, drop=True).values) & \
                     (BV1 <= upper_BV1_bin_limit_DA.where(upper_BV1_bin_limit_DA.BV1_bin_midpoint == BV1_bin, drop=True).values)
         
-        bin_index_variable_isfinite = xr.ufuncs.isfinite(variable_to_be_binned.where(bin_index)) # Test that there is valid data where the bin index is
+        bin_index_variable_isfinite = xr.apply_ufunc(np.isfinite, variable_to_be_binned.where(bin_index)) # Test that there is valid data where the bin index is
         
         if bin_index_variable_isfinite.sum() > 0:
                 
@@ -203,7 +203,7 @@ def bin_by_two_variables(variable_to_be_binned, BV1, BV2, lower_BV1_bin_limit_ve
                         (BV2 >= lower_BV2_bin_limit_DA.where(lower_BV2_bin_limit_DA.BV2_bin_midpoint == BV2_bin, drop=True).values) & \
                         (BV2 <= upper_BV2_bin_limit_DA.where(upper_BV2_bin_limit_DA.BV2_bin_midpoint == BV2_bin, drop=True).values)
             
-            bin_index_variable_isfinite = xr.ufuncs.isfinite(variable_to_be_binned.where(bin_index)) # Test that there is valid data where the bin index is
+            bin_index_variable_isfinite = xr.apply_ufunc(np.isfinite, variable_to_be_binned.where(bin_index)) # Test that there is valid data where the bin index is
                         
             if bin_index_variable_isfinite.sum() > 0:
                 
@@ -352,7 +352,7 @@ def calculate_one_variable_binned_ivar_composites(ivar, BV1, lower_BV1_bin_limit
         
     else:
         
-        output_dataset.to_netcdf(fname_datasets_for_simulation + '_'+ BV1_name_str + '_binned_' + ivar_name_str + '_composite' + '_' + current_year_string + '.nc', 'w')
+        output_dataset.to_netcdf(fname_datasets_for_simulation + BV1_name_str + '_binned_' + ivar_name_str + '_composite' + '_' + current_year_string + '.nc', 'w')
 
 ### Calculate Two Variable Binned Co-Evolution Composites
 
@@ -473,7 +473,7 @@ def calculate_two_variable_binned_coevolution_composites(BV1, BV2, lower_BV1_bin
         
     else:
         
-        output_dataset.to_netcdf(fname_datasets_for_simulation + '_'+ BV1_name_str + '_' + BV2_name_str + '_binned_coevolution_composite' + '_' + current_year_string + '.nc', 'w')
+        output_dataset.to_netcdf(fname_datasets_for_simulation + BV1_name_str + '_' + BV2_name_str + '_binned_coevolution_composite' + '_' + current_year_string + '.nc', 'w')
 
 ### Calculate Two Variable Binned ivar Composites
 
@@ -580,7 +580,7 @@ def calculate_two_variable_binned_ivar_composites(ivar, BV1, BV2, lower_BV1_bin_
         
     else:
         
-        output_dataset.to_netcdf(fname_datasets_for_simulation + '_'+ BV1_name_str + '_' + BV2_name_str + '_binned_' + ivar_name_str + '_composite' + '_' + current_year_string + '.nc', 'w')
+        output_dataset.to_netcdf(fname_datasets_for_simulation + BV1_name_str + '_' + BV2_name_str + '_binned_' + ivar_name_str + '_composite' + '_' + current_year_string + '.nc', 'w')
 
 ### Process Multiyear One Variable Binned ivar Composites
 
