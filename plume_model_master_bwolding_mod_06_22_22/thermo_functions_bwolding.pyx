@@ -9,7 +9,7 @@ cdef extern from "math.h":
 
 
 DTYPE = np.float64
-DTYPE1 = np.int
+DTYPE1 = np.int64 # Updated by B. Wolding 10/31/2023
 ctypedef np.float_t DTYPE_t
 ctypedef np.int_t DTYPE1_t
 
