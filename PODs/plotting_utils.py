@@ -4,6 +4,101 @@ import matplotlib.pyplot as plt
 
 ### Plot variable binned composites
 
+def plot_one_variable_binned_ivar(one_variable_binned_ivar_composites, min_number_of_obs, x_axis_limits=(), y_axis_limits=(), pdf_axis_limits=(), x_axis_label='Binning Variable', y_axis_label='Bin Mean iVar', pdf_axis_label='Percent of Total Samples', log_X_axis_boolean = False, log_Y_axis_boolean = False, plot_pdf_boolean=False, save_fig_boolean=False, figure_path_and_name='untitled.png'):
+    
+    bin_number_of_samples = one_variable_binned_ivar_composites['bin_number_of_samples_ivar']
+    bin_mean_ivar = one_variable_binned_ivar_composites['bin_mean_ivar']
+    
+    # Create mask for regions with insufficient obs #
+
+    insufficient_obs_mask = bin_number_of_samples < min_number_of_obs
+    
+    # Create "centered" figure #
+
+    fig = plt.figure(figsize=(10, 10))
+
+    # Ask for, out of a 1x1 grid, the first axes #
+
+    ax1 = fig.add_subplot(1, 1, 1)
+    ax1.plot(bin_mean_ivar.BV1_bin_midpoint.where(~insufficient_obs_mask), bin_mean_ivar.where(~insufficient_obs_mask), color='k',linestyle='solid', linewidth=5)
+
+    ax1.set_xlabel(x_axis_label, fontdict={'size':24,'weight':'bold'})
+    ax1.set_ylabel(y_axis_label, fontdict={'size':24,'weight':'bold'})
+
+    if len(x_axis_limits)==2:
+        ax1.set(xlim=x_axis_limits)
+    else:
+        ax1.set(xlim=(bin_mean_ivar.BV1_bin_midpoint.min(), bin_mean_ivar.BV1_bin_midpoint.max()))
+
+    if len(y_axis_limits)==2:
+        ax1.set(ylim=y_axis_limits)
+    else:
+        ax1.set(ylim=(bin_mean_ivar.min(), bin_mean_ivar.max()))
+
+    # Axis 1 Ticks #
+
+    ax1.tick_params(axis="x", direction="in", length=8, width=2, color="black")
+    ax1.tick_params(axis="y", direction="in", length=8, width=2, color="black")
+
+    ax1.tick_params(axis="x", labelsize=18, labelrotation=0, labelcolor="black")
+    ax1.tick_params(axis="y", labelsize=18, labelrotation=0, labelcolor="black")
+
+    for tick in ax1.xaxis.get_majorticklabels():
+        tick.set_fontsize(18)
+        tick.set_fontweight('bold')
+    
+    for tick in ax1.yaxis.get_majorticklabels():
+        tick.set_fontsize(18) 
+        tick.set_fontweight('bold')
+
+    if log_X_axis_boolean:
+        ax1.set_xscale("log")
+    
+    if log_Y_axis_boolean:
+        ax1.set_yscale("log")
+
+
+    if plot_pdf_boolean:
+        ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
+
+        ax2.set_ylabel(pdf_axis_label, fontdict={'size':24,'weight':'bold'})
+
+        if len(x_axis_limits)==2:
+            ax2.set(xlim=x_axis_limits)
+        else:
+            ax2.set(xlim=(bin_mean_ivar.BV1_bin_midpoint.min(), bin_mean_ivar.BV1_bin_midpoint.max()))
+
+        if len(pdf_axis_limits)==2:
+            ax2.set(ylim=pdf_axis_limits)
+        else:
+            ax2.set(ylim=(0, ((bin_number_of_samples / bin_number_of_samples.sum('BV1_bin_midpoint')) * 100).max()))
+
+        # Axis 2 Ticks #
+
+        ax2.plot(bin_number_of_samples.BV1_bin_midpoint, (bin_number_of_samples / bin_number_of_samples.sum('BV1_bin_midpoint')) * 100, color='k',linestyle='dashed', linewidth=5)
+
+        ax2.tick_params(axis="x", direction="in", length=8, width=2, color="black")
+        ax2.tick_params(axis="y", direction="in", length=8, width=2, color="black")
+
+        ax2.tick_params(axis="x", labelsize=18, labelrotation=0, labelcolor="black")
+        ax2.tick_params(axis="y", labelsize=18, labelrotation=0, labelcolor="black")
+
+        for tick in ax2.xaxis.get_majorticklabels():
+            tick.set_fontsize(18)
+            tick.set_fontweight('bold')
+    
+        for tick in ax2.yaxis.get_majorticklabels():
+            tick.set_fontsize(18) 
+            tick.set_fontweight('bold')
+
+    # Save figure #
+    
+    if save_fig_boolean:
+        plt.savefig(figure_path_and_name, dpi=1000, facecolor='w', edgecolor='w',
+                    orientation='portrait', papertype=None, format='png',
+                    transparent=False, bbox_inches='tight', pad_inches=0.0,
+                    frameon=None, metadata=None)
+
 def plot_one_variable_binned_ivar_with_pdf(one_variable_binned_ivar_composites, min_number_of_obs, save_fig_boolean=False, figure_path_and_name='untitled.png'):
     
     bin_number_of_samples = one_variable_binned_ivar_composites['bin_number_of_samples_ivar']
