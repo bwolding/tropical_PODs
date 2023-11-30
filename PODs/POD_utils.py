@@ -1,5 +1,229 @@
 import numpy as np
 import xarray as xr
+from tropical_PODs.plume_model_master_bwolding_mod_06_22_22.thermodynamic_functions import *
+from tropical_PODs.plume_model_master_bwolding_mod_06_22_22.thermo_functions_bwolding import plume_lifting_bwolding
+
+def numerical_plume_model(temperature, specific_humidity, launch_level_hPa):
+    
+    ###########################################################
+    # Takes a time x level variable, where time has length >= 2
+    # Launch level must be very near 1000 hPa, as 1000 hPa is used to determine mass flux profile
+    
+    # To really understand this function and the indexing conventions, look at how c_mix is defined and used in the plume_lifting
+    # function of thermo_functions.pyx in lines 485 - 495
+        
+    ############################################
+    ####  Run Numerical Plume Calculations  ####
+    ############################################
+    
+    ### Transpose data so it is time x level ##
+    
+    temperature = temperature.transpose('time','lev')  # Added by Brandon Wolding 06/22/2022
+    specific_humidity = specific_humidity.transpose('time','lev') # Added by Brandon Wolding 06/22/2022
+    
+    ### Sort levels in descending order ##
+    
+    temperature = temperature.sortby('lev', ascending=False) # Added by Brandon Wolding 06/22/2022
+    specific_humidity = specific_humidity.sortby('lev', ascending=False) # Added by Brandon Wolding 06/22/2022
+    
+    ###   Define inputs   ###
+
+    #temp = temperature.reindex(lev=temperature.lev[::-1]) # Commented out by Brandon Wolding 06/22/2022, removed because I added the sortby() code above
+    #sphum = specific_humidity.reindex(lev=specific_humidity.lev[::-1]) # Commented out by Brandon Wolding 06/22/2022, removed because I added the sortby() code above
+    
+    temp = temperature
+    sphum = specific_humidity
+    pressure = temperature['lev']
+    
+    #### Set mixing preference ####
+    # Deep-inflow B mixing like in Holloway & Neelin 2009, JAS; Schiro et al. 2016, JAS
+    #MIX='DIB'       
+
+    # No mixing case
+    # MIX='NOMIX'   
+
+    #print('READING AND PREPARING FILES')
+
+    ### Read pressure levels ###
+    lev=np.int_(pressure) ## convert from short to int
+
+    ### Remove some levels with NaNs
+    # THIS SECTION COMMENTED OUT BY BRANDON WOLDING 06/25/2021 TO REMOVE TREATMENT OF NANS. SECTION ADDED BELOW
+    
+    #ind_fin=np.where(np.isfinite(temp[0,:]))[0] # Commented out by Brandon Wolding 06/25/2021
+    #temp_fin=temp[:,ind_fin]
+    #sphum_fin=sphum[:,ind_fin]
+    #sphum_saturated_fin = sphum_saturated[:,ind_fin]
+    #lev_fin=lev[ind_fin]
+    
+    # THIS SECTION ADDED BY BRANDON WOLDING 06/25/2021 TO REPLACE ABOVE SECTION TREATING NANS
+    temp_fin=temp
+    sphum_fin=sphum
+    lev_fin=lev
+
+    ###   Save dims and coordinates for making xArray variables later   ###
+
+    temp_fin_dims = temp_fin.dims
+    temp_fin_coords = temp_fin.coords
+
+    ### Get time dimension ###
+    time_dim=np.arange(temp.shape[0])
+
+    ### Obtain indices for mid and starting pressure levels
+    i450=np.where(lev_fin==450)[0]
+    i1000=np.where(lev_fin==launch_level_hPa)[0]
+    i850=np.where(lev_fin==850)[0] # Added by Brandon Wolding 06/23/2022. Going to use this index to create c_mic_DIBDBL profile
+    ####
+    
+    ## Launch plume from 1000 hPa ##
+    ind_launch=np.zeros((time_dim.size),dtype='int')
+    ind_launch[:]=i1000 # Modified by Brandon Wolding 06/22/2021
+        
+    ### Prescribing mixing coefficients ###
+    c_mix_DIB = np.zeros((time_dim.size,lev_fin.size)) 
+    c_mix_NOMIX = np.zeros((time_dim.size,lev_fin.size))
+#     c_mix_DIBDBL = np.zeros((time_dim.size,lev_fin.size)) # Added by Brandon Wolding 06/22/2022
+     
+    ## Compute Deep Inflow Mass-Flux ##
+    ## The mass-flux (= vertical velocity) is a sine wave from near surface
+    ## to 450 mb. Designed to be 1 at the level of launch
+    ## and 0 above max. w i.e., no mixing in the upper trop.
+
+    #assert(all(ind_launch>=1)) # Commented out by Brandon Wolding 06/22/2021
+    w_mean = np.sin(np.pi*0.5*(lev_fin[ind_launch][:,None]-lev_fin[None,:])/(lev_fin[ind_launch][:,None]-lev_fin[i450])) # Modified by Brandon Wolding 06/22/2021 
+    minomind = np.where(w_mean==np.nanmax(w_mean))[0][0]
+    c_mix_DIB[:,1:-1]= (w_mean[:,2:] - w_mean[:,:-2])/(w_mean[:,2:]+w_mean[:,:-2]) # This section is meant to match plume_lifting_bwolding, a function within
+    # thermo_functions_bwolding.pyx, which was modified from original code by B. Wolding on 06/22/2022 in order to make local mixing instantatneous.
+    # In the original version, the plume properties at a given level were determined by mixing occuring at previous level, not mixing  occuring at current level.
+    # Essentially mixing occured from previous level, plume thermodynamics were diagnosed at current level, and then mixing at current level occured.
+    # In other words, plume properties at the current level were not impacted by mixing at the current level.
+    # This will bias CAPE high relative to if mixing occured locally (at current level) and instantaneuosly and then plume properties were diagnosed.
+    # In this version, plume mixing happens locally (at current level) and instantaenously.
+    # Here the definition of c_mix is such that c_mix(n) indicates the mixing of environmental air at level "n" into the plume. 
+
+    c_mix_DIB[c_mix_DIB<0]=0.0
+    c_mix_DIB[np.isinf(c_mix_DIB)]=0.0
+    
+    ## Compute Deep Inflow Mass-Flux Just in the DBL (up to 850 hPa) ##
+    ## Added by Brandon Wolding on 06/23/2022
+    
+#     c_mix_DIBDBL[:,1:-1]= (w_mean[:,2:] - w_mean[:,:-2])/(w_mean[:,2:]+w_mean[:,:-2])
+#     c_mix_DIBDBL[:,(int(i850)+1):]=0 # Set c_mix at all levels HIGHER THAN 850 hPa equal to 0. The +1 increment is very important to avoid resolution sensitivity. We want all resolutions to stop mixing at exactly 850 hPa.
+    
+    ### Change data type ####
+    temp_fin=np.float_(temp_fin)
+    sphum_fin=np.float_(sphum_fin)
+    
+    ### Set output variables ####
+    temp_plume_DIB=np.zeros_like(temp_fin)    
+    Tv_plume_DIB=np.zeros_like(temp_fin)    
+
+    temp_plume_NOMIX=np.zeros_like(temp_fin)    
+    Tv_plume_NOMIX=np.zeros_like(temp_fin)    
+    
+#     temp_plume_DIBDBL=np.zeros_like(temp_fin) # Added by Brandon Wolding on 06/23/2022
+#     Tv_plume_DIBDBL=np.zeros_like(temp_fin) # Added by Brandon Wolding on 06/23/2022 
+   
+    ## Launch plume ###
+    #print('DOING DIB PLUME COMPUTATION')
+    #print(np.shape(temp_fin))
+    #print(np.shape(sphum_fin))
+    #print(np.shape(Tv_plume_DIB))
+    #print(np.shape(temp_plume_DIB))
+    #print(np.shape(c_mix_DIB))
+    #print(np.shape(lev_fin))
+    #print(np.shape(ind_launch))
+    
+    plume_lifting_bwolding(temp_fin, sphum_fin, Tv_plume_DIB, temp_plume_DIB, c_mix_DIB, lev_fin, ind_launch)
+
+    #print('DOING NOMIX PLUME COMPUTATION')
+    plume_lifting_bwolding(temp_fin, sphum_fin, Tv_plume_NOMIX, temp_plume_NOMIX, c_mix_NOMIX, lev_fin, ind_launch)
+    
+    #print('DOING DIBDBL PLUME COMPUTATION')
+#     plume_lifting_bwolding(temp_fin, sphum_fin, Tv_plume_DIBDBL, temp_plume_DIBDBL, c_mix_DIBDBL, lev_fin, ind_launch) # Added by Brandon Wolding on 06/23/2022
+        
+    ##############################################
+    ###   Buoyancy and Dilution Calculations   ###
+    ##############################################
+
+    ## env. virtual temp. ###
+    Tv_env = temp_v_calc(temp_fin, sphum_fin, 0.) ### Environmental virtual temp.
+    
+    ### thermal buoyancy ####
+    #buoy_DIB = 9.8 * (Tv_plume_DIB-Tv_env)/(Tv_env)
+    #buoy_NOMIX = 9.8 * (Tv_plume_NOMIX-Tv_env)/(Tv_env)
+    
+    ## Turn Numpy Arrays into XArray Variables ####
+    
+    Tv_env = xr.DataArray(Tv_env,dims=temp_fin_dims,coords=temp_fin_coords,name='Tv_env')
+    Tv_env.attrs['units'] = '[K]'
+    
+    Tv_plume_DIB = xr.DataArray(Tv_plume_DIB,dims=temp_fin_dims,coords=temp_fin_coords,name='Tv_plume_DIB')
+    Tv_plume_DIB.attrs['units'] = '[K]'
+    
+    Tv_plume_NOMIX = xr.DataArray(Tv_plume_NOMIX,dims=temp_fin_dims,coords=temp_fin_coords,name='Tv_plume_NOMIX')
+    Tv_plume_NOMIX.attrs['units'] = '[K]'
+
+    c_mix_DIB = xr.DataArray(c_mix_DIB,dims=temp_fin_dims,coords=temp_fin_coords,name='c_mix_DIB')
+    c_mix_DIB.attrs['units'] = '[K]'
+    
+#     Tv_plume_DIBDBL = xr.DataArray(Tv_plume_DIBDBL,dims=temp_fin_dims,coords=temp_fin_coords,name='Tv_plume_DIBDBL')
+#     Tv_plume_DIBDBL.attrs['units'] = '[K]'
+
+    ## Drop time dimension from c_mix_DIB
+
+    c_mix_DIB = c_mix_DIB.isel(time=0).drop('time')
+    
+    ## Sort Level into Ascending Order ##
+    Tv_env = Tv_env.sortby('lev','ascending')
+    Tv_plume_DIB = Tv_plume_DIB.sortby('lev','ascending')
+    Tv_plume_NOMIX = Tv_plume_NOMIX.sortby('lev','ascending')
+    c_mix_DIB = c_mix_DIB.sortby('lev','ascending')
+#     Tv_plume_DIBDBL = Tv_plume_DIBDBL.sortby('lev','ascending')
+    
+    return Tv_env, Tv_plume_DIB, Tv_plume_NOMIX, c_mix_DIB #, Tv_plume_DIBDBL
+
+def calculate_CAPE(Tv_env, Tv_plume, pressure_model_level_midpoint_Pa, pressure_model_level_interface_Pa, max_pressure_integral_array_Pa, min_pressure_integral_array_Pa):
+    
+    # Accepts both integers and arrays as min and max pressure limits
+     
+    # Define constants
+    
+    R_d = 287 # [J Kg^-1 K^-1]
+    
+    # Define virtual temperature difference between plume and environment
+    
+    delta_Tv_plume_env = Tv_plume - Tv_env
+    
+    # Set all model interfaces less than minimum pressure equal to minimum pressure, and more than maximum pressure to maximum pressure. This way, when you calculate "dp", these layers will not have mass.
+    
+    pressure_model_level_interface_Pa = pressure_model_level_interface_Pa.where(pressure_model_level_interface_Pa < max_pressure_integral_array_Pa, other = max_pressure_integral_array_Pa)
+    pressure_model_level_interface_Pa = pressure_model_level_interface_Pa.where(pressure_model_level_interface_Pa > min_pressure_integral_array_Pa, other = min_pressure_integral_array_Pa)
+
+    # Calculate delta natural log pressure for each model level
+    
+    d_ln_p = pressure_model_level_midpoint_Pa.copy()
+    d_ln_p.values = xr.DataArray(xr.apply_ufunc(np.log, pressure_model_level_interface_Pa.isel(ilev = slice(1, len(pressure_model_level_interface_Pa.ilev))).values) - xr.apply_ufunc(np.log, pressure_model_level_interface_Pa.isel(ilev = slice(0, -1)).values)) # Slice indexing is (inclusive start, exclusive stop)
+    
+    # Set dp = nan at levels missing data so mass of those levels not included in calculation of dp_total
+    
+    d_ln_p = d_ln_p.where(~xr.apply_ufunc(np.isnan, delta_Tv_plume_env), drop=False, other=np.nan)
+    
+    # Mass weight each layer
+    
+    CAPE = R_d * (Tv_plume - Tv_env) * d_ln_p
+    
+    # Integrate over levels
+    
+    CAPE = CAPE.sum('lev', min_count=1)
+    d_ln_p_total = d_ln_p.sum('lev', min_count=1)
+    
+    # Set ci_variable to nan wherever d_ln_p_total is zero or nan
+    
+    CAPE = CAPE.where(~(d_ln_p_total==0), drop = False, other=np.nan)
+    CAPE = CAPE.where(~xr.apply_ufunc(np.isnan, d_ln_p_total), drop = False, other=np.nan)
+    
+    return CAPE
 
 ### Limit list of files to select years
 
