@@ -94,9 +94,9 @@ def plot_one_variable_binned_ivar(one_variable_binned_ivar_composites, min_numbe
     
     if save_fig_boolean:
         plt.savefig(figure_path_and_name, dpi=1000, facecolor='w', edgecolor='w',
-                    orientation='portrait', papertype=None, format='png',
+                    orientation='portrait', format='png',
                     transparent=False, bbox_inches='tight', pad_inches=0.0,
-                    frameon=None, metadata=None)
+                    metadata=None)
 
 def plot_two_variables_binned_ivar(two_variable_binned_coevolution_composites, color_shading_var, color_shading_var_number_of_samples, min_number_of_obs, color_shading_levels, color_shading_map, colorbar_extend_string, colorbar_tick_levels, colorbar_label_string, scientific_colorbar_boolean, log_Y_axis_boolean, x_axis_limits=(), y_axis_limits=(), x_axis_label='Binning Variable 1', y_axis_label='Binning Variable 2', plot_vectors_boolean = False, leading_lagging_centered_string='centered', save_fig_boolean=False, figure_path_and_name='untitled.png'):
     
@@ -295,6 +295,6 @@ def plot_two_variables_binned_ivar(two_variable_binned_coevolution_composites, c
     
     if save_fig_boolean:
         plt.savefig(figure_path_and_name, dpi=1000, facecolor='w', edgecolor='w',
-                    orientation='portrait', papertype=None, format='png',
+                    orientation='portrait', format='png',
                     transparent=False, bbox_inches='tight', pad_inches=0.0,
-                    frameon=None, metadata=None)
+                    metadata=None)
