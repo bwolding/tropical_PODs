@@ -1,0 +1,29 @@
+name: base
+channels:
+  - defaults
+dependencies:
+  - _anaconda_depends
+  - python=3.11
+  - setuptools
+  - pip
+  - wheel
+  - anaconda-anon-usage
+  - anaconda-catalogs
+  - anaconda-client
+  - anaconda-project
+  - anaconda-navigator
+  - conda
+  - conda-build
+  - conda-content-trust
+  - conda-libmamba-solver
+  - conda-pack
+  - conda-package-handling
+  - conda-package-streaming
+  - conda-token
+  - conda-verify
+  - python.app
+  - netcdf4
+  - cftime
+  - h5netcdf
+  - cython
+prefix: /Users/bwolding_personal/anaconda3
