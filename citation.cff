@@ -10,6 +10,9 @@ authors:
 - family-names: Gehne
     given-names: Maria
     orcid: https://orcid.org/0000-0002-7267-8676
+- family-names: Ahmed
+    given-names: Fiaz
+    orcid: TBD
 title: "Tropical Process-Oriented Diagnostics (POD) Toolbox"
 version: 1.0
 date-released: 2024-03-01
